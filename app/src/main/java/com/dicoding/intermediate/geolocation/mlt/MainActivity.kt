@@ -2,6 +2,7 @@ package com.dicoding.intermediate.geolocation.mlt
 
 import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -26,6 +27,8 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.PolylineOptions
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -37,6 +40,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var locationCallback: LocationCallback
 
     private var isTracking = false
+
+    private var allLatLng = ArrayList<LatLng>()
+
+    private var boundsBuilder = LatLngBounds.Builder()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,6 +78,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         createLocationCallback()
         binding.btnStart.setOnClickListener {
             if (!isTracking) {
+                clearMaps()
                 updateTrackingStatus(true)
                 startLocationUpdate()
             } else {
@@ -190,6 +198,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onLocationResult(locationResult: LocationResult) {
                 for (location in locationResult.locations) {
                     Log.d(TAG, "onLocationResult: ${location.latitude}, ${location.longitude}")
+                    val lastLatLng = LatLng(location.latitude, location.longitude)
+
+                    allLatLng.add(lastLatLng)
+                    mMap.addPolyline(
+                        PolylineOptions()
+                            .color(Color.CYAN)
+                            .width(10f)
+                            .addAll(allLatLng)
+                    )
+
+                    boundsBuilder.include(lastLatLng)
+                    val bounds: LatLngBounds = boundsBuilder.build()
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 64))
                 }
             }
         }
@@ -218,6 +239,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun stopLocationUpdate() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    private fun clearMaps() {
+        mMap.clear()
+        allLatLng.clear()
+        boundsBuilder = LatLngBounds.Builder()
     }
 
     companion object {
